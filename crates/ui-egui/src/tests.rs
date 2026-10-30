@@ -6093,3 +6093,28 @@ fn room_area_computation_is_set_from_manage_and_undone() {
     h.run();
     assert_eq!(h.state().session.model.room_area, RoomArea::Centre);
 }
+
+#[test]
+fn the_walls_room_bounding_is_a_check_box_in_properties_that_is_on_until_cleared() {
+    let mut h = app(BOX);
+    let wall = ids(&h, "wall")[0];
+    h.state_mut().selection = vec![wall];
+    h.run();
+    use egui_kittest::kittest::NodeT;
+    let on = |h: &Harness<BimApp>| {
+        h.get_by_role_and_label(Role::CheckBox, "Room Bounding").accesskit_node().toggled() == Some(egui::accesskit::Toggled::True)
+    };
+    assert!(on(&h), "a wall bounds rooms until told otherwise");
+    // The row is at the foot of the palette: scroll to it as a user would.
+    h.get_by_role_and_label(Role::CheckBox, "Room Bounding").scroll_to_me();
+    h.run();
+    pick(&mut h, Role::CheckBox, "Room Bounding");
+    assert_eq!(field(&h, wall, "room_bounding"), json!(false));
+    assert!(!on(&h));
+    assert_eq!(h.state().session.history().last().copied(), Some("Modify"));
+    pick(&mut h, Role::CheckBox, "Room Bounding");
+    assert!(on(&h));
+    h.state_mut().run("undo", json!({}));
+    h.run();
+    assert_eq!(field(&h, wall, "room_bounding"), json!(false), "each is its own undo step");
+}

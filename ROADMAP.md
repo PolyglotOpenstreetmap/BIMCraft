@@ -90,7 +90,7 @@ The goal is the editing tools a working architect reaches for every hour.
 | Join and cut geometry (wall to floor, column to wall cleanups in plan and section) | M |
 | Wall openings (rectangular cuts) and wall profile editing (an elevation sketch) | M |
 | Wall sweeps and reveals as profiles along a wall | M |
-| ~~Room separation lines~~; room bounding on and off per element | S | Room separation lines done (`room_separator`, an `IfcVirtualElement` in IFC) |
+| ~~Room separation lines; room bounding on and off per element~~ | S | Done: `room_separator` (an `IfcVirtualElement` in IFC) and a wall's `room_bounding` (`wall`, `modify`, the Properties palette): off, rooms run through the wall and floors made from walls don't change |
 | **Curtain walls**: grid lines, mullion types, panel types (glass, solid, door panel); curtain systems on faces later | XL |
 
 Not scheduled yet: stacked walls as a type, in-place elements, and floor and roof shape editing by sub-element.

@@ -44,6 +44,8 @@ enum Kind {
     /// A mass's top outline: corners as `x, y`, parted by `;`, or blank for none.
     Outline,
     Flag,
+    /// A flag that is on while the element has no such field (the field is written only when off).
+    FlagOn,
     Level,
     /// A level, shown by name; read only.
     LevelName,
@@ -131,6 +133,7 @@ fn rows(category: &str) -> &'static [Row] {
             ("Dimensions", "radius", "Radius", LengthShown),
             (msg!("Other"), "start", msg!("Start"), Point),
             ("Other", "end", msg!("End"), Point),
+            ("Other", "room_bounding", msg!("Room Bounding"), FlagOn),
         ],
         "door" => &[
             ("Constraints", "level", "Level", LevelName),
@@ -1218,8 +1221,8 @@ impl BimApp {
                                     crop = Some(on);
                                 }
                             }
-                            Flag => {
-                                let mut on = val.as_bool().unwrap_or(false);
+                            Flag | FlagOn => {
+                                let mut on = val.as_bool().unwrap_or(matches!(kind, FlagOn));
                                 let r = ui.checkbox(&mut on, "");
                                 // A checkbox without text names itself "" for screen readers: give it its row's name.
                                 r.widget_info(|| WidgetInfo::selected(WidgetType::Checkbox, true, on, label));

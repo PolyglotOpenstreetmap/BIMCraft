@@ -334,6 +334,7 @@ pub(crate) fn import(cx: &mut Import, f: &Facts, g: &Gathered) {
                 base_offset: micron(mm(r.bbox[2]) - mm(elevation)),
                 arc,
                 location: Location::Centre,
+                room_bounding: true,
                 attach_top: None,
                 attach_base: None,
             };

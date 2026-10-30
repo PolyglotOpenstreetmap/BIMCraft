@@ -224,6 +224,10 @@ pub struct Wall {
     pub arc: f64,
     #[serde(default, skip_serializing_if = "is_centre")]
     pub location: Location,
+    /// Whether rooms stop at it (Revit's Room Bounding). Off, a room runs through the wall; floors made from walls
+    /// don't change.
+    #[serde(default = "yes", skip_serializing_if = "is_true")]
+    pub room_bounding: bool,
     /// The roof or floor its top follows, from below, instead of its top constraint; and the one its
     /// base stands on.
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -233,6 +237,10 @@ pub struct Wall {
     /// Its values of the project's parameters, by name.
     #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
     pub params: BTreeMap<String, serde_json::Value>,
+}
+
+fn is_true(b: &bool) -> bool {
+    *b
 }
 
 fn is_zero(x: &f64) -> bool {
@@ -4474,23 +4482,24 @@ impl Model {
     /// separation line drawn to a wall's face, as one drawn on a plan usually is, runs on to the wall's centre line, so it
     /// splits rooms measured there too.
     pub fn bounding_lines(&self, level: impl Key) -> Vec<(P2, P2)> {
-        let walls = self.wall_segments(level);
+        let walls = self.wall_segments(level, true);
         let mut lines: Vec<(P2, P2)> = walls.iter().map(|&(a, b, _)| (a, b)).collect();
         lines.extend(self.separators(level).into_iter().map(|(a, b)| (to_centre(b, a, &walls), to_centre(a, b, &walls))));
         lines
     }
 
-    /// Centre lines of the walls that bound the rooms of `level`, arcs as chords.
+    /// Centre lines of the walls on `level`, arcs as chords: what a floor made from walls follows, room bounding or not.
     pub fn wall_lines(&self, level: impl Key) -> Vec<(P2, P2)> {
-        self.wall_segments(level).into_iter().map(|(a, b, _)| (a, b)).collect()
+        self.wall_segments(level, false).into_iter().map(|(a, b, _)| (a, b)).collect()
     }
 
-    /// The segments of [`Model::wall_lines`], each with half its wall's thickness.
-    fn wall_segments(&self, level: impl Key) -> Vec<(P2, P2, f64)> {
+    /// The segments of the walls on `level`, each with half its wall's thickness; with `rooms`, only the walls that bound
+    /// rooms.
+    fn wall_segments(&self, level: impl Key, rooms: bool) -> Vec<(P2, P2, f64)> {
         self.elements
             .iter()
             .filter_map(|(&id, e)| match e {
-                Element::Wall(w) if self.bounding(w, level) => Some((id, self.thickness(w) / 2.0)),
+                Element::Wall(w) if self.bounding(w, level) && (!rooms || w.room_bounding) => Some((id, self.thickness(w) / 2.0)),
                 _ => None,
             })
             .flat_map(|(id, half)| {
@@ -4500,12 +4509,17 @@ impl Model {
             .collect()
     }
 
-    /// The faces of the walls that bound the rooms of `level`: the edges of their outlines. Room separation lines
-    /// aren't among them: a floor or a ceiling picked inside the walls runs past them.
+    /// The faces of the walls on `level`: the edges of their outlines. Room separation lines aren't among them: a floor or a
+    /// ceiling picked inside the walls runs past them, and past a wall's Room Bounding too.
     pub fn face_lines(&self, level: impl Key) -> Vec<(P2, P2)> {
+        self.faces_of(level, false)
+    }
+
+    /// The faces of the walls on `level`, or with `rooms` of the ones that bound rooms.
+    fn faces_of(&self, level: impl Key, rooms: bool) -> Vec<(P2, P2)> {
         self.elements
             .iter()
-            .filter(|(_, e)| matches!(e, Element::Wall(w) if self.bounding(w, level)))
+            .filter(|(_, e)| matches!(e, Element::Wall(w) if self.bounding(w, level) && (!rooms || w.room_bounding)))
             .flat_map(|(&id, _)| geom::ring_edges(&walls::outline(self, id)).collect::<Vec<_>>())
             .collect()
     }
@@ -4545,7 +4559,7 @@ impl Model {
         }
         self.elements
             .iter()
-            .filter(|(_, e)| matches!(e, Element::Wall(w) if self.bounding(w, r.level)))
+            .filter(|(_, e)| matches!(e, Element::Wall(w) if self.bounding(w, r.level) && w.room_bounding))
             .find(|&(&id, _)| geom::contains(&walls::outline(self, id), r.point))
             .map(|(&id, _)| id)
     }
@@ -4555,7 +4569,7 @@ impl Model {
         match at {
             RoomArea::Centre => self.bounding_lines(level),
             RoomArea::Finish => {
-                let mut lines = self.face_lines(level);
+                let mut lines = self.faces_of(level, true);
                 lines.extend(self.separators(level));
                 lines
             }
@@ -5968,6 +5982,7 @@ mod tests {
             base_offset: 0.0,
             arc: 0.0,
             location: Location::Centre,
+            room_bounding: true,
             attach_top: None,
             attach_base: None,
         })

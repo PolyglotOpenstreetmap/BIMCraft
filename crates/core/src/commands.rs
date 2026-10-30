@@ -179,12 +179,13 @@ pub static ALL: &[Command] = &[
         "wall",
         msg!("Wall"),
         &["WA"],
-        "{points: [[x,y],…], closed?, type?, level?, top_level?, height?, base_offset?, arc?, location?, attach_top?, \
-         attach_base?} one wall per segment of its location line; up to the next level, or `height` mm tall (unconnected), or up \
+        "{points: [[x,y],…], closed?, type?, level?, top_level?, height?, base_offset?, arc?, location?, room_bounding?, \
+         attach_top?, attach_base?} one wall per segment of its location line; up to the next level, or `height` mm tall (unconnected), or up \
          to `top_level`. `arc`: degrees each turns from its start to its end, counter-clockwise (180, a half circle bulging to \
          its right). `location`: the line of it the points are on: centre (the default), core-centre, exterior-finish, \
          interior-finish, exterior-core or interior-core; its exterior side is to the left of its start to its end, so walls \
-         drawn clockwise face out. `attach_top`, `attach_base`: a roof or floor its top follows from below, or its base stands \
+         drawn clockwise face out. `room_bounding`: false and rooms run through it (Revit's Room Bounding; `modify` changes it \
+         later); floors made from walls are the same either way. `attach_top`, `attach_base`: a roof or floor its top follows from below, or its base stands \
          on",
         wall,
     ),
@@ -5070,6 +5071,12 @@ fn wall(s: &mut Session, p: &Value) -> R {
         None => Location::Centre,
     };
     let (attach_top, attach_base) = (id_opt(c, p, "attach_top")?, id_opt(c, p, "attach_base")?);
+    // On unless said off, so a null or a word is an error rather than "off".
+    let room_bounding = match p.get("room_bounding") {
+        None => true,
+        Some(Value::Bool(b)) => *b,
+        Some(v) => return Err(bad(c, format!("`room_bounding` must be true or false, got {v}"))),
+    };
     let m = s.model_mut();
     let ids: Vec<Id> = pts
         .windows(2)
@@ -5085,6 +5092,7 @@ fn wall(s: &mut Session, p: &Value) -> R {
                 base_offset,
                 arc,
                 location,
+                room_bounding,
                 attach_top,
                 attach_base,
             }))),
@@ -6583,6 +6591,7 @@ fn dormer(s: &mut Session, p: &Value) -> R {
             base_offset,
             arc: 0.0,
             location: Location::Centre,
+            room_bounding: true,
             attach_top: Some(roof_guid),
             attach_base: Some(host),
         })

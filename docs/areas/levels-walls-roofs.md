@@ -22,7 +22,7 @@ layers over, by the way its layer set's usage stacks them). A layer's material i
 paper, where the layer is `PATTERN_ROOM` px wide), its surface pattern a model pattern (`MODULE` mm, its real size). A curved wall turns `arc` degrees, counter-clockwise positive (`walls::Axis`). Where walls meet,
 their faces meet in mitred caps at any angle, and a wall ending on another stops at its face (`walls::cap`); plans, 3D,
 sections and IFC all draw that outline (`walls::outline`, `walls::prisms`). Room areas are measured at the walls' centre
-lines, run on or back to meet at joins (`walls::centre_line`). A room separator (`roomseparator`, made by `room_separator` a line per segment) bounds rooms as a wall's centre line
+lines, run on or back to meet at joins (`walls::centre_line`). A wall's `room_bounding` (Revit's Room Bounding; on unless false, and written to a file only then) says whether rooms stop at it: `bounding_lines`, `room_lines` and `wall_holding` leave out a wall that is off, while `wall_lines` and `face_lines`, which floors made from walls follow, still take it. A room separator (`roomseparator`, made by `room_separator` a line per segment) bounds rooms as a wall's centre line
 would and nothing else: it is no edge of a floor, a ceiling or a roof (`Model::bounding_lines` takes it, `wall_lines` and
 `face_lines` don't; an end drawn to a wall's face runs on to its centre line there, so the line splits rooms measured at
 the centre lines too), it is drawn in plan only, and it goes to IFC as an `IfcVirtualElement` of `ObjectType` `RoomSeparation`

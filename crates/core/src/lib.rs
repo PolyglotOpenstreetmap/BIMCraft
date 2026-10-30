@@ -65,6 +65,8 @@ mod reinforce_tests;
 pub mod render;
 #[cfg(test)]
 mod room_area_tests;
+#[cfg(test)]
+mod room_bounding_tests;
 pub mod runs;
 pub mod sample;
 pub mod schedule;
