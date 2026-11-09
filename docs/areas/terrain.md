@@ -2,7 +2,9 @@
 
 Revit's toposurface. The geometry is `crates/core/src/topo.rs` (a TIN, heights, contours, areas; no model); the element is
 `Element::Toposurface` (`model.rs`); the commands `toposurface`, `height_at` and `contours` are in `commands.rs`; the tests are `topo.rs`
-and `topo_tests.rs`. OpenStreetMap buildings stand on it ([OSM import](osm-import.md)); the project's place on Earth is
+and `topo_tests.rs`. The command-to-file acceptance journeys are in `crates/core/tests/terrain_acceptance.rs` (synthetic surveys,
+native reopen, pre-site format 17, and planar terrain/pad IFC exchange). OpenStreetMap buildings stand on it
+([OSM import](osm-import.md)); the project's place on Earth is
 [georeferencing](georeferencing.md).
 
 ## The element
@@ -16,7 +18,8 @@ edges follow: ridges, valleys, kerbs), an optional `boundary` (a ring in plan; w
 Caps (`Model::check`): 3 to `MAX_TERRAIN_POINTS` (50,000) points, `MAX_BREAKLINES` (1,000) breaklines of 2 to `MAX_POINTS` points,
 an interval of 0 or at least `MIN_CONTOUR_INTERVAL` (10 mm). `Model::check` does not triangulate (it runs after every command);
 the `toposurface` command does, so what makes no surface (fewer than three places, all on a line) is refused when it is made.
-It moves, turns and mirrors in plan with its heights staying. File `FORMAT` 12 added it.
+It moves, turns and mirrors in plan with its heights staying. File `FORMAT` 18 added terrain and pads; format 17 projects still open
+without a site-data conversion.
 
 ## The TIN
 
@@ -43,7 +46,7 @@ a plan drawn again, a height asked again, is not triangulating again.
 **`pad`**: Revit's building pad, an element with a `level`, an outline flat at `offset` mm above it, and a `thickness` (300 by default): a slab
 under its top. It is a category (`pad`: phases, project parameters, views may hide it), drawn as an outline on its own level's plan, a
 slab in 3D, scheduled (Name, Level, Area, Top, Thickness, Cut, Fill, Net), moved, turned and mirrored in plan, and exported as an
-`IfcSlab` (`.BASESLAB.`, object type `Pad`) on its storey, read back as a pad and never as a floor. `FORMAT` 13 added it.
+`IfcSlab` (`.BASESLAB.`, object type `Pad`) on its storey, read back as a pad and never as a floor. `FORMAT` 18 added it.
 
 **Cut and fill** (`Tin::cut_fill`, the `cut_fill` command, and `cut_m3`, `fill_m3`, `net_m3` in a pad's listing): cut is where the ground is above
 the pad's top, fill where it is below; `net_m3` is fill less cut, so positive is earth to bring in. It is **exact**: the pad's outline is cut into
