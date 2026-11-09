@@ -59,21 +59,27 @@ mod tests {
     #[test]
     fn a_constrained_valley_survives_native_reopen() {
         let dir = tempfile::tempdir().unwrap();
-        let mut s = Session::new();
-        run(
-            &mut s,
-            "toposurface",
-            json!({
-                "points": [[0,0,0],[12000,0,2000],[10000,10000,0],[0,8000,2000]],
-                "breaklines": [[[0,0,0],[10000,10000,0]]]
-            }),
-        );
+        // This non-cocircular quadrilateral triangulates across the high corners without a constraint.
+        let points = json!([[0, 0, 0], [10000, 0, 2000], [10000, 10000, 0], [0, 8000, 2000]]);
         let query = json!({"points": [[2500,2500],[5000,5000],[7500,7500]]});
+        let mut control = Session::new();
+        run(&mut control, "toposurface", json!({"points": points}));
+        let unconstrained = run(&mut control, "height_at", query.clone());
+        let heights = unconstrained["heights"].as_array().unwrap();
+        assert_eq!(heights.len(), 3);
+        // Interpolate the planes on either side of the high diagonal: the valley must not exist yet.
+        for (height, expected) in heights.iter().zip([1125.0, 1800.0, 900.0]) {
+            assert!((height.as_f64().unwrap() - expected).abs() < 1e-6, "{unconstrained}");
+        }
+
+        let mut s = Session::new();
+        run(&mut s, "toposurface", json!({"points": points, "breaklines": [[[0,0,0],[10000,10000,0]]]}));
         assert_eq!(run(&mut s, "height_at", query.clone())["heights"], json!([0.0, 0.0, 0.0]));
         let path = dir.path().join("valley.bimcraft");
         run(&mut s, "save", json!({"path": path}));
-        run(&mut s, "open", json!({"path": path}));
-        assert_eq!(run(&mut s, "height_at", query)["heights"], json!([0.0, 0.0, 0.0]));
+        let mut reopened = Session::new();
+        run(&mut reopened, "open", json!({"path": path}));
+        assert_eq!(run(&mut reopened, "height_at", query)["heights"], json!([0.0, 0.0, 0.0]));
     }
 
     #[test]
