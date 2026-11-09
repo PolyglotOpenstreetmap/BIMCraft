@@ -45,6 +45,24 @@ Coordinates row, or a pair pasted into either field).
 first time, then any one. `crs` is an EPSG code, `"EPSG:31983"`, or `"utm"`. `point` [x, y] mm answers with `lonlat`, `lonlat`
 [longitude, latitude] with `point`; neither changes the project. `inspect` shows `location`.
 
+## Independent acceptance
+
+`cargo test -p bimcraft-core --test georef_acceptance` checks the complete command, native save/reopen and IFC save/reopen
+journey against frozen PROJ 9.5.1 values in `ci/georef_cases.json`. These synthetic points cover both sides of a UTM central
+meridian in both hemispheres, a central-meridian quarter turn, and Lambert-93 with a rotated project. An invalid CRS must
+leave the saved location intact.
+
+For the real CLI and an independent IFC reader, install `ifcopenshell==0.8.5`, `pyproj==3.7.2` and `pytest`, then run
+`python ci/accept_georef.py PATH/TO/bimcraft-cli OUTPUT_DIRECTORY`. The output directory receives synthetic command scripts,
+native projects, IFC files and `acceptance.json`. This also recomputes the frozen PROJ oracle, validates IFC schema/EXPRESS
+rules and GUID uniqueness, checks the wall's bounds and volume, and applies the emitted map conversion with IfcOpenShell.
+The oracle uses PROJ's signed meridian convergence: the map x-axis rotation is `convergence - true_north`. The context's
+TrueNorth remains `(-sin(true_north), cos(true_north))` in the project plane; convergence belongs in the map conversion.
+The transformed north ray is independently checked as a WGS 84 geodesic bearing and distance. Position tolerances are
+1 mm, direction components 2e-8, and point scale 1e-7; the kilometre ray allows 0.001 degrees and 0.1 m because the map
+conversion is a tangent-plane approximation. This acceptance covers horizontal placement and origin elevation, not
+vertical datums or the separate distinction between native horizontal scale and IFC4 isotropic scale away from z=0.
+
 ## IFC
 
 Export, when the project is placed:
